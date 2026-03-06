@@ -1,4 +1,5 @@
 import type { MonthlyHeatmapData } from './types';
+import type { Theme } from './svg-generator';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -12,13 +13,35 @@ const PAD_RIGHT = 8;
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 // Exercism / GitHub green scale (matches the annual heatmap)
-function getColor(count: number | null): string {
+interface MonthlyThemeColors {
+  bg: string | null;
+  empty: string;
+  scale: [string, string, string, string];
+  textSecondary: string;
+}
+
+const MONTHLY_THEMES: Record<Theme, MonthlyThemeColors> = {
+  light: {
+    bg:            null,
+    empty:         '#ebedf0',
+    scale:         ['#9be9a8', '#40c463', '#30a14e', '#216e39'],
+    textSecondary: '#57606a',
+  },
+  dark: {
+    bg:            '#0d1117',
+    empty:         '#161b22',
+    scale:         ['#0e4429', '#006d32', '#26a641', '#39d353'],
+    textSecondary: '#7d8590',
+  },
+};
+
+function getColor(count: number | null, t: MonthlyThemeColors): string {
   if (count === null) return 'none';   // empty cell (before 1st / after last)
-  if (count === 0)   return '#ebedf0';
-  if (count === 1)   return '#9be9a8';
-  if (count <= 3)    return '#40c463';
-  if (count <= 6)    return '#30a14e';
-  return '#216e39';
+  if (count === 0)   return t.empty;
+  if (count === 1)   return t.scale[0];
+  if (count <= 3)    return t.scale[1];
+  if (count <= 6)    return t.scale[2];
+  return t.scale[3];
 }
 
 // ─── Grid builder ─────────────────────────────────────────────────────────────
@@ -56,7 +79,8 @@ function buildGrid(data: MonthlyHeatmapData): { cells: Cell[]; numWeeks: number 
 
 // ─── SVG generator ───────────────────────────────────────────────────────────
 
-export function generateMonthlySVG(data: MonthlyHeatmapData): string {
+export function generateMonthlySVG(data: MonthlyHeatmapData, theme: Theme = 'light'): string {
+  const t = MONTHLY_THEMES[theme];
   const { cells, numWeeks } = buildGrid(data);
 
   const svgW = DOW_W + numWeeks * STEP + PAD_RIGHT;
@@ -71,7 +95,7 @@ export function generateMonthlySVG(data: MonthlyHeatmapData): string {
     text-anchor="middle"
     font-size="10"
     font-weight="600"
-    fill="#57606a"
+    fill="${t.textSecondary}"
     font-family="${font}"
   >${data.month_name} ${data.year}</text>`;
 
@@ -83,7 +107,7 @@ export function generateMonthlySVG(data: MonthlyHeatmapData): string {
       y="${y}"
       text-anchor="end"
       font-size="8"
-      fill="#8c959f"
+      fill="${t.textSecondary}"
       font-family="${font}"
     >${label}</text>`;
   }).join('\n');
@@ -92,7 +116,7 @@ export function generateMonthlySVG(data: MonthlyHeatmapData): string {
   const rects = cells.map(({ row, col, day, count }) => {
     const x = DOW_W + col * STEP;
     const y = PAD_TOP + row * STEP;
-    const fill = getColor(count);
+    const fill = getColor(count, t);
 
     if (fill === 'none') {
       // Invisible placeholder — keeps grid spacing intact
@@ -114,9 +138,13 @@ export function generateMonthlySVG(data: MonthlyHeatmapData): string {
     x="${DOW_W}"
     y="${statsY}"
     font-size="9"
-    fill="#57606a"
+    fill="${t.textSecondary}"
     font-family="${font}"
   >${data.total_this_month} submission${data.total_this_month !== 1 ? 's' : ''} this month</text>`;
+
+  const bgRect = t.bg
+    ? `<rect width="${svgW}" height="${svgH + 14}" rx="8" ry="8" fill="${t.bg}" />`
+    : '';
 
   return `<svg
   xmlns="http://www.w3.org/2000/svg"
@@ -126,6 +154,7 @@ export function generateMonthlySVG(data: MonthlyHeatmapData): string {
   role="img"
   aria-label="Exercism monthly heatmap for ${data.month_name} ${data.year}"
 >
+${bgRect}
 ${monthLabel}
 ${dowLabels}
 ${rects}

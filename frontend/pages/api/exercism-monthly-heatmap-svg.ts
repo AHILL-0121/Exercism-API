@@ -77,7 +77,7 @@ export default async function handler(
       submissions_by_day: submissionsByDay,
     };
 
-    const svg = generateMonthlySVG(data);
+    const svg = generateMonthlySVG(data, req.query.theme === 'dark' ? 'dark' : 'light');
 
     res.setHeader('Content-Type', 'image/svg+xml');
     res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=1800');

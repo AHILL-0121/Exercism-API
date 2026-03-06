@@ -29,6 +29,8 @@ export default async function handler(
       ? parseInt(yearParam, 10)
       : undefined;
 
+  const theme = req.query.theme === 'dark' ? 'dark' : 'light' as const;
+
   try {
     // Always fetch all solutions and filter by year — avoids the early-exit
     // ordering bug where a stale-ordered solution from a prior year truncates results.
@@ -36,7 +38,7 @@ export default async function handler(
     const year = requestedYear ?? getDefaultYear(solutions) ?? new Date().getFullYear();
     const yearSolutions = solutions.filter(s => solutionDate(s).getFullYear() === year);
     const heatmap = aggregateSolutions(yearSolutions, username, year);
-    const svg = generateSVG(heatmap);
+    const svg = generateSVG(heatmap, theme);
 
     res.setHeader('Content-Type', 'image/svg+xml');
     res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=1800');

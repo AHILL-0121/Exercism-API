@@ -14,23 +14,42 @@ import type { HeatmapData, DayCount } from './types';
 */
 
 // ─────────────────────────────────────────────────────────────
-// Color scale
+// Themes
 // ─────────────────────────────────────────────────────────────
 
-const COLOR_EMPTY = '#ebedf0';
-const COLOR_SCALE = [
-  { min: 1, max: 1,        color: '#9be9a8' },
-  { min: 2, max: 3,        color: '#40c463' },
-  { min: 4, max: 6,        color: '#30a14e' },
-  { min: 7, max: Infinity, color: '#216e39' },
-];
+export type Theme = 'light' | 'dark';
 
-function getColor(count: number): string {
-  if (count === 0) return COLOR_EMPTY;
-  for (const entry of COLOR_SCALE) {
-    if (count >= entry.min && count <= entry.max) return entry.color;
-  }
-  return COLOR_SCALE[COLOR_SCALE.length - 1].color;
+interface ThemeColors {
+  bg: string;
+  empty: string;
+  scale: [string, string, string, string]; // 1, 2–3, 4–6, 7+
+  textPrimary: string;
+  textSecondary: string;
+}
+
+const THEMES: Record<Theme, ThemeColors> = {
+  light: {
+    bg:            '#ffffff',
+    empty:         '#ebedf0',
+    scale:         ['#9be9a8', '#40c463', '#30a14e', '#216e39'],
+    textPrimary:   '#24292f',
+    textSecondary: '#57606a',
+  },
+  dark: {
+    bg:            '#0d1117',
+    empty:         '#161b22',
+    scale:         ['#0e4429', '#006d32', '#26a641', '#39d353'],
+    textPrimary:   '#e6edf3',
+    textSecondary: '#7d8590',
+  },
+};
+
+function getColor(count: number, t: ThemeColors): string {
+  if (count === 0) return t.empty;
+  if (count === 1) return t.scale[0];
+  if (count <= 3)  return t.scale[1];
+  if (count <= 6)  return t.scale[2];
+  return t.scale[3];
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -80,7 +99,8 @@ interface GridCell {
 
 function buildGrid(
   data: DayCount[],
-  year: number
+  year: number,
+  t: ThemeColors,
 ): { cells: GridCell[]; totalColumns: number; monthStartCols: number[] } {
 
   const countMap = new Map<string, number>();
@@ -110,7 +130,7 @@ function buildGrid(
       cells.push({
         x: colToX(col),
         y: rowToY(row),
-        color: getColor(count),
+        color: getColor(count, t),
         count,
         date: dateStr
       });
@@ -133,10 +153,10 @@ function buildGrid(
 // Legend
 // ─────────────────────────────────────────────────────────────
 
-function buildLegend(x: number, y: number): string {
-  const colors = [COLOR_EMPTY, ...COLOR_SCALE.map(s => s.color)];
+function buildLegend(x: number, y: number, t: ThemeColors): string {
+  const colors = [t.empty, ...t.scale];
   const parts: string[] = [
-    `<text x="${x}" y="${y + CELL - 1}" font-size="9" fill="#57606a" font-family="system-ui,-apple-system,sans-serif">Less</text>`
+    `<text x="${x}" y="${y + CELL - 1}" font-size="9" fill="${t.textSecondary}" font-family="system-ui,-apple-system,sans-serif">Less</text>`
   ];
 
   let cx = x + 30;
@@ -149,7 +169,7 @@ function buildLegend(x: number, y: number): string {
   }
 
   parts.push(
-    `<text x="${cx + 2}" y="${y + CELL - 1}" font-size="9" fill="#57606a" font-family="system-ui,-apple-system,sans-serif">More</text>`
+    `<text x="${cx + 2}" y="${y + CELL - 1}" font-size="9" fill="${t.textSecondary}" font-family="system-ui,-apple-system,sans-serif">More</text>`
   );
 
   return parts.join('\n');
@@ -159,7 +179,8 @@ function buildLegend(x: number, y: number): string {
 // Main SVG Generator
 // ─────────────────────────────────────────────────────────────
 
-export function generateSVG(heatmap: HeatmapData): string {
+export function generateSVG(heatmap: HeatmapData, theme: Theme = 'light'): string {
+  const t = THEMES[theme];
 
   const {
     username,
@@ -170,7 +191,7 @@ export function generateSVG(heatmap: HeatmapData): string {
     data
   } = heatmap;
 
-  const { cells, totalColumns, monthStartCols } = buildGrid(data, year);
+  const { cells, totalColumns, monthStartCols } = buildGrid(data, year, t);
 
   const SVG_WIDTH =
     PAD_LEFT +
@@ -198,7 +219,7 @@ export function generateSVG(heatmap: HeatmapData): string {
     const nextStartCol = i + 1 < monthStartCols.length ? monthStartCols[i + 1] : totalColumns;
     const monthCols = nextStartCol - startCol - 1; // subtract the separator gap column
     const midX = colToX(startCol) + (monthCols * STEP - GAP) / 2;
-    return `<text x="${midX}" y="${monthLabelY}" font-size="10" fill="#57606a"
+    return `<text x="${midX}" y="${monthLabelY}" font-size="10" fill="${t.textSecondary}"
       text-anchor="middle"
       font-family="system-ui,-apple-system,sans-serif">
       ${MONTH_NAMES[i]}
@@ -207,7 +228,7 @@ export function generateSVG(heatmap: HeatmapData): string {
 
   const dayLabels = DAY_LABELS.map((d, i) =>
     `<text x="${PAD_LEFT - 4}" y="${rowToY(i) + CELL - 1}" font-size="9"
-      fill="#57606a"
+      fill="${t.textSecondary}"
       text-anchor="end"
       font-family="system-ui,-apple-system,sans-serif">${d}</text>`
   ).join('\n');
@@ -216,30 +237,30 @@ export function generateSVG(heatmap: HeatmapData): string {
   const mid = SVG_WIDTH / 2;
 
   const stats = `
-    <text x="${PAD_LEFT}" y="${statsY}" font-size="11" fill="#24292f"
+    <text x="${PAD_LEFT}" y="${statsY}" font-size="11" fill="${t.textPrimary}"
       font-weight="600"
       font-family="system-ui,-apple-system,sans-serif">${escapeXml(username)}</text>
 
     <text x="${mid - 90}" y="${statsY}" font-size="11"
-      fill="#57606a"
+      fill="${t.textSecondary}"
       font-family="system-ui,-apple-system,sans-serif">
       ${total_submissions} submission${total_submissions !== 1 ? 's' : ''} in ${year}
     </text>
 
     <text x="${mid + 100}" y="${statsY}" font-size="11"
-      fill="#57606a"
+      fill="${t.textSecondary}"
       font-family="system-ui,-apple-system,sans-serif">
       Streak: ${streak} days
     </text>
 
     <text x="${SVG_WIDTH - PAD_RIGHT - 120}" y="${statsY}" font-size="11"
-      fill="#57606a"
+      fill="${t.textSecondary}"
       font-family="system-ui,-apple-system,sans-serif">
       Best: ${longest_streak} days
     </text>
   `;
 
-  const legend = buildLegend(SVG_WIDTH - 178, SVG_HEIGHT + 8);
+  const legend = buildLegend(SVG_WIDTH - 178, SVG_HEIGHT + 8, t);
 
   return `<svg
     xmlns="http://www.w3.org/2000/svg"
@@ -249,7 +270,7 @@ export function generateSVG(heatmap: HeatmapData): string {
     role="img"
   >
 
-    <rect width="${SVG_WIDTH}" height="${totalHeight}" rx="8" ry="8" fill="#ffffff" />
+    <rect width="${SVG_WIDTH}" height="${totalHeight}" rx="8" ry="8" fill="${t.bg}" />
 
     ${monthLabels}
     ${dayLabels}

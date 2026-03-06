@@ -14,8 +14,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       ? parseInt(yearParam, 10)
       : new Date().getFullYear();
 
+  const theme = req.query.theme === 'dark' ? 'dark' : 'light' as const;
+
   const heatmap = generateSampleHeatmap(year);
-  const svg = generateSVG(heatmap);
+  const svg = generateSVG(heatmap, theme);
 
   res.setHeader('Content-Type', 'image/svg+xml');
   // Short cache — it's deterministic but cheap to regenerate
