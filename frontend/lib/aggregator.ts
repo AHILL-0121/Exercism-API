@@ -87,6 +87,7 @@ export function aggregateSolutions(
   solutions: ExercismSolution[],
   username: string,
   year: number,
+  avatarUrl?: string,
 ): HeatmapData {
   const countMap = buildCountMap(solutions);
   const dates = getDatesForYear(year);
@@ -106,5 +107,6 @@ export function aggregateSolutions(
     streak,
     longest_streak: longestStreak,
     data,
+    avatar_url: avatarUrl,
   };
 }

@@ -62,7 +62,7 @@ const STEP = CELL + GAP;
 const MONTH_GAP = 10;
 
 const PAD_LEFT = 34;
-const PAD_TOP = 10;
+const PAD_TOP = 40;
 const PAD_RIGHT = 14;
 const PAD_BOTTOM = 22;
 
@@ -188,7 +188,8 @@ export function generateSVG(heatmap: HeatmapData, theme: Theme = 'light'): strin
     total_submissions,
     streak,
     longest_streak,
-    data
+    data,
+    avatar_url
   } = heatmap;
 
   const { cells, totalColumns, monthStartCols } = buildGrid(data, year, t);
@@ -262,6 +263,55 @@ export function generateSVG(heatmap: HeatmapData, theme: Theme = 'light'): strin
 
   const legend = buildLegend(SVG_WIDTH - 178, SVG_HEIGHT + 8, t);
 
+  // Exercism logo and profile picture
+  const LOGO_SIZE = 24;
+  const AVATAR_SIZE = 20;
+  const header = `
+    <!-- Exercism Logo -->
+    <image href="https://assets.exercism.org/meta/logo-square.svg" 
+      x="${PAD_LEFT}" y="12" 
+      width="${LOGO_SIZE}" height="${LOGO_SIZE}" />
+    <text x="${PAD_LEFT + LOGO_SIZE + 6}" y="${12 + LOGO_SIZE - 6}" 
+      font-size="13" fill="${t.textPrimary}" font-weight="600"
+      font-family="system-ui,-apple-system,sans-serif">Exercism</text>
+  `;
+
+  const avatarImage = avatar_url ? `
+    <defs>
+      <clipPath id="avatar-clip">
+        <circle cx="${PAD_LEFT + AVATAR_SIZE / 2}" cy="${statsY - AVATAR_SIZE / 2 + 1}" r="${AVATAR_SIZE / 2}" />
+      </clipPath>
+    </defs>
+    <image href="${escapeXml(avatar_url)}" 
+      x="${PAD_LEFT}" y="${statsY - AVATAR_SIZE + 1}" 
+      width="${AVATAR_SIZE}" height="${AVATAR_SIZE}" 
+      clip-path="url(#avatar-clip)" />
+  ` : '';
+
+  const statsWithAvatar = `
+    <text x="${PAD_LEFT + (avatar_url ? AVATAR_SIZE + 6 : 0)}" y="${statsY}" font-size="11" fill="${t.textPrimary}"
+      font-weight="600"
+      font-family="system-ui,-apple-system,sans-serif">${escapeXml(username)}</text>
+
+    <text x="${mid - 90}" y="${statsY}" font-size="11"
+      fill="${t.textSecondary}"
+      font-family="system-ui,-apple-system,sans-serif">
+      ${total_submissions} submission${total_submissions !== 1 ? 's' : ''} in ${year}
+    </text>
+
+    <text x="${mid + 100}" y="${statsY}" font-size="11"
+      fill="${t.textSecondary}"
+      font-family="system-ui,-apple-system,sans-serif">
+      Streak: ${streak} days
+    </text>
+
+    <text x="${SVG_WIDTH - PAD_RIGHT - 120}" y="${statsY}" font-size="11"
+      fill="${t.textSecondary}"
+      font-family="system-ui,-apple-system,sans-serif">
+      Best: ${longest_streak} days
+    </text>
+  `;
+
   return `<svg
     xmlns="http://www.w3.org/2000/svg"
     width="${SVG_WIDTH}"
@@ -272,11 +322,13 @@ export function generateSVG(heatmap: HeatmapData, theme: Theme = 'light'): strin
 
     <rect width="${SVG_WIDTH}" height="${totalHeight}" rx="8" ry="8" fill="${t.bg}" />
 
+    ${header}
+    ${avatarImage}
     ${monthLabels}
     ${dayLabels}
     ${rects}
     ${legend}
-    ${stats}
+    ${statsWithAvatar}
 
   </svg>`;
 }

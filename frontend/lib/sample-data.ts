@@ -85,5 +85,6 @@ export function generateSampleHeatmap(year: number): HeatmapData {
     streak,
     longest_streak: longestStreak,
     data,
+    avatar_url: 'https://assets.exercism.org/avatars/1283496/0',
   };
 }

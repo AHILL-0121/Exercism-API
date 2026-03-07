@@ -15,6 +15,7 @@ export default async function handler(
 
   const token = process.env.EXERCISM_API_TOKEN;
   const username = process.env.EXERCISM_USERNAME;
+  const avatarUrl = process.env.EXERCISM_AVATAR_URL;
 
   if (!token || !username) {
     return res.status(500).json({
@@ -36,7 +37,7 @@ export default async function handler(
     const solutions = await fetchAllSolutions({ token, username });
     const year = requestedYear ?? getDefaultYear(solutions) ?? new Date().getFullYear();
     const yearSolutions = solutions.filter(s => solutionDate(s).getFullYear() === year);
-    const heatmap = aggregateSolutions(yearSolutions, username, year);
+    const heatmap = aggregateSolutions(yearSolutions, username, year, avatarUrl);
 
     // Cache for 15 minutes
     res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=1800');

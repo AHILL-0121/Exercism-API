@@ -40,6 +40,7 @@ export interface HeatmapData {
   streak: number;
   longest_streak: number;
   data: DayCount[];
+  avatar_url?: string;
 }
 
 export interface FetchOptions {

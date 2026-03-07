@@ -14,6 +14,7 @@ export default async function handler(
 
   const token = process.env.EXERCISM_API_TOKEN;
   const username = process.env.EXERCISM_USERNAME;
+  const avatarUrl = process.env.EXERCISM_AVATAR_URL;
 
   if (!token || !username) {
     res.status(500).setHeader('Content-Type', 'text/plain').end(
@@ -37,7 +38,7 @@ export default async function handler(
     const solutions = await fetchAllSolutions({ token, username });
     const year = requestedYear ?? getDefaultYear(solutions) ?? new Date().getFullYear();
     const yearSolutions = solutions.filter(s => solutionDate(s).getFullYear() === year);
-    const heatmap = aggregateSolutions(yearSolutions, username, year);
+    const heatmap = aggregateSolutions(yearSolutions, username, year, avatarUrl);
     const svg = generateSVG(heatmap, theme);
 
     res.setHeader('Content-Type', 'image/svg+xml');
